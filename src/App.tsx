@@ -3,6 +3,7 @@ import { Button, Flex, message, Upload, type UploadFile } from "antd";
 import "./App.css";
 
 const MAX_COUNT = 5;
+const FILE_MAX_MB = 10;
 const TOTAL_MAX_MB = 20;
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
           <span>계약서를 업로드하세요</span>
           <span>(PDF / 이미지)</span>
           <Upload
+            name="files"
             multiple
             accept=".pdf,image/*"
             action="/api/analyze"
@@ -23,6 +25,20 @@ function App() {
             fileList={fileList}
             onChange={({ fileList: next }) => setFileList(next)}
             beforeUpload={(file) => {
+              const currentCount = fileList.length;
+              const currentTotalBytes = fileList.reduce(
+                (sum, f) => sum + (f.size || 0),
+                0,
+              );
+
+              // 🔢 개수 체크
+              if (currentCount + 1 > MAX_COUNT) {
+                message.error(
+                  `파일은 최대 ${MAX_COUNT}개까지 업로드할 수 있어요.`,
+                );
+                return Upload.LIST_IGNORE;
+              }
+
               // 타입 체크
               const okType =
                 file.type === "application/pdf" ||
@@ -32,13 +48,17 @@ function App() {
                 return Upload.LIST_IGNORE;
               }
 
-              // ✅ 총 용량만 체크
-              const currentTotal = fileList.reduce(
-                (sum, f) => sum + (f.size || 0),
-                0,
-              );
+              // 📏 파일당 크기 체크
+              const fileMB = file.size / 1024 / 1024;
+              if (fileMB > FILE_MAX_MB) {
+                message.error(
+                  `파일 1개 최대 ${FILE_MAX_MB}MB까지 업로드할 수 있어요.`,
+                );
+                return Upload.LIST_IGNORE;
+              }
 
-              const nextTotalMB = (currentTotal + file.size) / 1024 / 1024;
+              // 총합 크기 체크
+              const nextTotalMB = (currentTotalBytes + file.size) / 1024 / 1024;
 
               if (nextTotalMB > TOTAL_MAX_MB) {
                 message.error(
@@ -51,7 +71,8 @@ function App() {
             }}
           >
             <Button>
-              파일 선택 (최대 {MAX_COUNT}개, 총 {TOTAL_MAX_MB}MB)
+              파일 선택 (최대 {MAX_COUNT}개, 파일당 {FILE_MAX_MB}MB, 총{" "}
+              {TOTAL_MAX_MB}MB)
             </Button>
           </Upload>
         </Flex>
