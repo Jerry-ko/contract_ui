@@ -8,7 +8,52 @@ const TOTAL_MAX_MB = 20;
 
 function App() {
   const [fileList, setFileList] = useState<UploadFile<any>[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  const handleClickAnalyze = async () => {
+    if (isAnalyzing) return;
+
+    if (fileList.length === 0) {
+      message.warning("분석할 파일을 먼저 업로드해주세요.");
+      return;
+    }
+
+    const files = fileList
+      .map((f) => f.originFileObj)
+      .filter(Boolean) as File[];
+
+    if (files.length === 0) {
+      message.error("업로드된 파일을 다시 선택해주세요.");
+      return;
+    }
+
+    const formData = new FormData();
+
+    files.forEach((file) => formData.append("files", file));
+
+    try {
+      setIsAnalyzing(true);
+
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        message.error(data?.message || "분석에 실패했어요.");
+        return;
+      }
+
+      message.success("분석이 완료됐어요!");
+      console.log("analyze result:", data.result);
+    } catch (e) {
+      message.error("분석 중 오류가 발생했어요.");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
   return (
     <Flex vertical gap={20}>
       {/* 파일 업로드 영역 */}
@@ -20,7 +65,7 @@ function App() {
             name="files"
             multiple
             accept=".pdf,image/*"
-            action="/api/analyze"
+            disabled={isAnalyzing}
             maxCount={MAX_COUNT}
             fileList={fileList}
             onChange={({ fileList: next }) => setFileList(next)}
@@ -67,7 +112,7 @@ function App() {
                 return Upload.LIST_IGNORE;
               }
 
-              return true;
+              return false;
             }}
           >
             <Button>
@@ -75,6 +120,13 @@ function App() {
               {TOTAL_MAX_MB}MB)
             </Button>
           </Upload>
+          <Button
+            loading={isAnalyzing}
+            disabled={isAnalyzing || fileList.length === 0}
+            onClick={handleClickAnalyze}
+          >
+            분석 시작
+          </Button>
         </Flex>
       </section>
 
