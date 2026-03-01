@@ -10,6 +10,23 @@ function App() {
   const [fileList, setFileList] = useState<UploadFile<any>[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  const mapAnalyzeError = (res: Response, data: any) => {
+    if (data?.message) return data.message;
+
+    switch (res.status) {
+      case 429:
+        return "요청이 너무 많아요. 잠시 후 다시 시도해주세요.";
+      case 413:
+        return "파일 용량이 제한을 초과했어요.";
+      case 415:
+        return "지원하지 않는 파일 형식이에요.";
+      case 400:
+        return "업로드 파일을 확인해주세요.";
+      default:
+        return "분석 중 오류가 발생했어요.";
+    }
+  };
+
   const handleClickAnalyze = async () => {
     if (isAnalyzing) return;
 
@@ -42,7 +59,8 @@ function App() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        message.error(data?.message || "분석에 실패했어요.");
+        const msg = mapAnalyzeError(res, data);
+        message.error(msg);
         return;
       }
 
