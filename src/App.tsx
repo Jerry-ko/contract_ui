@@ -10,23 +10,6 @@ function App() {
   const [fileList, setFileList] = useState<UploadFile<any>[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const mapAnalyzeError = (res: Response, data: any) => {
-    if (data?.message) return data.message;
-
-    switch (res.status) {
-      case 429:
-        return "요청이 너무 많아요. 잠시 후 다시 시도해주세요.";
-      case 413:
-        return "파일 용량이 제한을 초과했어요.";
-      case 415:
-        return "지원하지 않는 파일 형식이에요.";
-      case 400:
-        return "업로드 파일을 확인해주세요.";
-      default:
-        return "분석 중 오류가 발생했어요.";
-    }
-  };
-
   const handleClickAnalyze = async () => {
     if (isAnalyzing) return;
 
@@ -55,11 +38,10 @@ function App() {
         method: "POST",
         body: formData,
       });
-
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        const msg = mapAnalyzeError(res, data);
+        const msg = data.message || "분석 중 오류가 발생했어요";
         message.error(msg);
         return;
       }
@@ -77,12 +59,12 @@ function App() {
       {/* 파일 업로드 영역 */}
       <section>
         <Flex vertical gap={8} align="center">
-          <span>계약서를 업로드하세요</span>
-          <span>(PDF / 이미지)</span>
+          <span>계약서를 사진으로 찍어 업로드하세요.</span>
+          <span>(JPG, PNG)</span>
           <Upload
             name="files"
             multiple
-            accept=".pdf,image/*"
+            accept="image/*"
             disabled={isAnalyzing}
             maxCount={MAX_COUNT}
             fileList={fileList}
@@ -103,11 +85,9 @@ function App() {
               }
 
               // 타입 체크
-              const okType =
-                file.type === "application/pdf" ||
-                file.type.startsWith("image/");
+              const okType = file.type.startsWith("image/");
               if (!okType) {
-                message.error("PDF 또는 이미지 파일만 업로드할 수 있어요.");
+                message.error("이미지 파일(JPG, PNG 등)만 업로드할 수 있어요.");
                 return Upload.LIST_IGNORE;
               }
 
